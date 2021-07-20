@@ -8,7 +8,6 @@ import {
   ETHAN_PRIVKEY,
 } from "../util/constants";
 import { describeDevMoonbeam } from "../util/setup-dev-tests";
-import { sendSubstrateTxAndListenInBlockEvents } from "../util/substrate-rpc";
 
 describeDevMoonbeam("Treasury proposal #1", (context) => {
   it("should not be able to be approved by a non-council member", async function () {
@@ -183,18 +182,14 @@ describeDevMoonbeam("Treasury proposal #7", (context) => {
 
     // Charleth submit the proposal to the council (and therefore implicitly votes for)
     let proposalHash = null;
-    await sendSubstrateTxAndListenInBlockEvents(
-      context,
-      charleth,
-      context.polkadotApi.tx.councilCollective.propose(
-        2,
-        context.polkadotApi.tx.treasury.approveProposal(0),
-        1_000
-      ),
-      (events) => {
-        proposalHash = events[0].event.data[2].toHuman();
-      }
-    );
+    await context.polkadotApi.tx.councilCollective.propose(
+      2,
+      context.polkadotApi.tx.treasury.approveProposal(0),
+      1_000
+    ).signAndSend(charleth);
+    await context.createBlock();
+    let events = await context.polkadotApi.query.system.events();
+    proposalHash = events[3].event.data[2].toHuman();
 
     // Dorothy vote for this proposal and close it
     await context.polkadotApi.tx.councilCollective.vote(proposalHash, 0, true).signAndSend(dorothy);
@@ -230,18 +225,14 @@ describeDevMoonbeam("Treasury proposal #8", (context) => {
     // Charleth proposed that the council reject the treasury proposal
     // (and therefore implicitly votes for)
     let councilProposalHash = null;
-    await sendSubstrateTxAndListenInBlockEvents(
-      context,
-      charleth,
-      context.polkadotApi.tx.councilCollective.propose(
-        2,
-        context.polkadotApi.tx.treasury.rejectProposal(0),
-        1_000
-      ),
-      (events) => {
-        councilProposalHash = events[0].event.data[2].toHuman();
-      }
-    );
+    await context.polkadotApi.tx.councilCollective.propose(
+      2,
+      context.polkadotApi.tx.treasury.rejectProposal(0),
+      1_000
+    ).signAndSend(charleth);
+    await context.createBlock();
+    let events = await context.polkadotApi.query.system.events();
+    councilProposalHash = events[3].event.data[2].toHuman();
 
     // Dorothy vote for against proposal and close it
     await context.polkadotApi.tx.councilCollective
@@ -249,15 +240,12 @@ describeDevMoonbeam("Treasury proposal #8", (context) => {
       .signAndSend(dorothy);
     await context.createBlock();
     await context.createBlock();
-    await sendSubstrateTxAndListenInBlockEvents(
-      context,
-      dorothy,
-      context.polkadotApi.tx.councilCollective.close(councilProposalHash, 0, 800_000_000, 1_000),
-      (events) => {
-        // Verify that the proposal is rejected (0x11 = Treasury index, 0x03 = event Rejected)
-        expect(events[3].event.index.toHuman()).to.equal("0x1103");
-      }
-    );
+
+    await context.polkadotApi.tx.councilCollective.close(councilProposalHash, 0, 800_000_000, 1_000).signAndSend(dorothy);
+    await context.createBlock();
+    events = await context.polkadotApi.query.system.events();
+    // Verify that the proposal is rejected (0x11 = Treasury index, 0x03 = event Rejected)
+    expect(events[6].event.index.toHuman()).to.equal("0x1103");
 
     // Verify that the proposal is deleted
     expect((await context.polkadotApi.query.treasury.proposals(0)).toHuman()).to.equal(
