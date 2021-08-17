@@ -588,6 +588,11 @@ pub mod pallet {
 				length,
 			}
 		}
+		/// Check if round should be updated next block
+		/// TODO: should 1 be configurable?
+		pub fn update_next_block(&self, now: B) -> bool {
+			now + 1u32.into() - self.first == self.length.into()
+		}
 		/// Check if the round should be updated
 		pub fn should_update(&self, now: B) -> bool {
 			now - self.first >= self.length.into()
@@ -848,6 +853,15 @@ pub mod pallet {
 		}
 		fn on_initialize(n: T::BlockNumber) -> Weight {
 			let mut round = <Round<T>>::get();
+			if round.update_next_block(n) {
+				// select top collator candidates for next round
+				let (collator_count, nomination_count, total_staked) =
+					Self::select_top_candidates(round.current + 1u32);
+				// TODO emit relevant event now
+				// TODO: change `select_top_candidates` to put them in NextSelectedCandidates
+				// and then have a `put_selected_candidates()` in the if statement below
+				return T::WeightInfo::passive_on_initialize() // TODO: benchmarking for this path
+			}
 			if round.should_update(n) {
 				// mutate round
 				round.update(n);
@@ -857,9 +871,9 @@ pub mod pallet {
 				Self::execute_collator_exits(round.current);
 				// execute all delayed nominator exits
 				Self::execute_nominator_exits(round.current);
-				// select top collator candidates for next round
-				let (collator_count, nomination_count, total_staked) =
-					Self::select_top_candidates(round.current);
+				// // select top collator candidates for next round
+				// let (collator_count, nomination_count, total_staked) =
+				// 	Self::select_top_candidates(round.current);
 				// start next round
 				<Round<T>>::put(round);
 				// snapshot total stake
@@ -929,6 +943,12 @@ pub mod pallet {
 	#[pallet::getter(fn selected_candidates)]
 	/// The collator candidates selected for the current round
 	type SelectedCandidates<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn next_selected_candidates)]
+	/// The collator candidates selected for the next round
+	/// empty except for 1 block before next round (TODO: should 1 block be configurable?)
+	type NextSelectedCandidates<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn total)]
