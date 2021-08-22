@@ -1,11 +1,15 @@
-import { importAccount, web3, gerald, contractAddress } from "./init-web3";
+import { init, importAccount, web3, gerald, contractAddress } from "./init-web3";
 
 const main = async () => {
-  const nonce = await web3.eth.getTransactionCount(gerald.address);
-
+  init("http://127.0.0.1:9933")
+  // console.log (web3)
   const chainId = await web3.eth.net.getId();
-  // Step 1: Creating the contract.
   console.log(`Using chain id: ${chainId}\n`);
+  const nonce = await web3.eth.getTransactionCount(gerald.address);
+  console.log(`nonde: ${nonce}`)
+  
+  // Step 1: Creating the contract.
+  
   console.log(`Gerald account: ${gerald.address} (nonce: ${nonce})`);
 
   const contractAdd = contractAddress(gerald.address, 0);
