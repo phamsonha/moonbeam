@@ -456,9 +456,8 @@ const parachainTemplate = {
       name: "alice",
       flags: [
         "--log=info,rpc=trace,evm=trace,ethereum=trace",
-        // "--unsafe-rpc-external",
-        // "--rpc-cors=all",
-        "--rpc-methods=Unsafe",
+        "--unsafe-rpc-external",
+        "--rpc-cors=all",
         "--",
         "--execution=wasm",
       ],
@@ -470,9 +469,8 @@ const parachainTemplate = {
       name: "bob",
       flags: [
         "--log=info,rpc=trace,evm=trace,ethereum=trace",
-        // "--unsafe-rpc-external",
-        // "--rpc-cors=all",
-        "--rpc-methods=Unsafe",
+        "--unsafe-rpc-external",
+        "--rpc-cors=all",
         "--",
         "--execution=wasm",
       ],
